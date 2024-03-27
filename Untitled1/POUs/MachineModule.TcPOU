@@ -1,0 +1,235 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="MachineModule" Id="{602b75bf-4454-4d86-891c-c421c777a81c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK MachineModule EXTENDS FB_PackML_BaseModule IMPLEMENTS ITF_Observable
+VAR
+	//SubModules
+	Equip1 : EquipmentModule := (Name := 'EM1');
+	Equip2 : EquipmentModule := (Name := 'EM2');
+	Equip3 : EquipmentModule := (Name := 'EM3');
+
+	//ITF_Observable
+	_Observers : ARRAY[1..Parameters_PackML_Base.MAX_NO_OF_SUBMODULES +1] OF ITF_Observer;
+
+	//Data to be Observered
+	_data	 : UDINT;
+	dataPrev : UDINT;
+
+	//CyclicLogic
+	fbRT	  : R_TRIG;
+	register1 : BOOL;
+	remove1	  : BOOL;
+	register2 : BOOL;
+	remove2	  : BOOL;
+	register3 : BOOL;
+	remove3	  : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="CyclicLogic" Id="{8194e871-49ef-4415-8fb1-d7ebfd30fc92}">
+      <Declaration><![CDATA[METHOD PUBLIC CyclicLogic
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT _InitComplete THEN
+    _InitComplete := Initialize();
+    RETURN;
+END_IF
+
+//On data change call all observers
+fbRT(CLK:= data <> dataPrev);
+IF fbRT.Q THEN
+	notifyObserver();
+	dataPrev := data;
+END_IF
+
+
+//Attach Observer
+IF register1 THEN
+	IF 	registerObserver(Equip1) THEN
+		register1 := FALSE;
+	END_IF
+END_IF
+IF register2 THEN
+	IF 	registerObserver(Equip2) THEN
+		register2 := FALSE;
+	END_IF
+END_IF
+IF register3 THEN
+	IF 	registerObserver(Equip3) THEN
+		register3 := FALSE;
+	END_IF
+END_IF
+
+//Detach Observer
+IF remove1 THEN
+	IF removeObserver(Equip1) THEN 
+		remove1 := FALSE;
+	END_IF
+END_IF
+IF remove2 THEN
+	IF removeObserver(Equip2) THEN 
+		remove2 := FALSE;
+	END_IF
+END_IF
+IF remove3 THEN
+	IF removeObserver(Equip3) THEN 
+		remove3 := FALSE;
+	END_IF
+END_IF
+
+//Change this value for testing
+_data;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Data" Id="{f4fc42a0-586c-4ebb-a6e2-868f903690a5}">
+      <Declaration><![CDATA[PROPERTY Data : udint]]></Declaration>
+      <Get Name="Get" Id="{6cd58a3e-af15-4405-8a2a-09dee5fe3bcd}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Data := _data;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{92e1f414-1f36-4755-877d-48fa897ce5f3}">
+      <Declaration><![CDATA[METHOD PROTECTED Initialize : BOOL]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Initialize := FALSE;
+CASE DescendantSequenceState OF
+	0:
+		//
+		RegisterSubmodule(Equip1);
+		RegisterSubmodule(Equip2);
+		RegisterSubmodule(Equip3);
+
+		//
+		registerObserver(Equip1);
+		registerObserver(Equip2);
+		registerObserver(Equip3);
+
+		//
+		_LogModeChanges			:= FALSE;
+		_LogStateChanges		:= FALSE;
+		DescendantSequenceState := DescendantSequenceState + 10;
+
+	10:
+		(* Call the Super *)
+		IF SUPER^.Initialize() THEN
+			DescendantSequenceState := DescendantSequenceState + 10;
+		END_IF
+
+	20:
+		Initialize := TRUE;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="notifyObserver" Id="{d1812f3c-0b2f-4422-b38f-0d9ce6ddbc38}">
+      <Declaration><![CDATA[METHOD notifyObserver : BOOL
+VAR
+	i : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Call all registered Observers and pass them the Observable
+FOR i := 1 TO Parameters_PackML_Base.MAX_NO_OF_SUBMODULES DO
+	IF _Observers[i] <> 0 THEN
+		_Observers[i].update(THIS^);
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="registerObserver" Id="{d2eceb4c-c79f-4016-a3a9-08e399359a42}">
+      <Declaration><![CDATA[METHOD registerObserver : BOOL
+VAR_INPUT
+	Observer : ITF_Observer;
+END_VAR
+
+VAR
+	i : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[registerObserver := FALSE;
+
+//Check if Observer is already registered
+FOR i := 1 TO Parameters_PackML_Base.MAX_NO_OF_SUBMODULES DO
+	IF _Observers[i] = Observer THEN
+		RETURN;
+	END_IF
+END_FOR
+
+//Add Observer to first available index within the array
+FOR i := 1 TO Parameters_PackML_Base.MAX_NO_OF_SUBMODULES DO
+	IF _Observers[i] = 0 THEN
+		_Observers[i]	 := Observer;
+		registerObserver := TRUE;
+		EXIT;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="removeObserver" Id="{5d969133-4b83-4e41-8598-8257f8657787}">
+      <Declaration><![CDATA[METHOD removeObserver : BOOL
+VAR_INPUT
+	Observer : ITF_Observer;
+END_VAR
+
+VAR
+	i : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[removeObserver := FALSE;
+
+//Check for valid input
+IF (Observer = 0) THEN
+	RETURN;
+END_IF
+
+//Find Observer to be removed and set the array index to 0, will remove duplicates if they exist
+FOR i := 1 TO Parameters_PackML_Base.MAX_NO_OF_SUBMODULES DO
+	IF (_Observers[i] = Observer) THEN
+		_Observers[i]  := 0;
+		removeObserver := TRUE;
+	END_IF
+END_FOR
+
+//Clean up array
+FOR i := 1 TO Parameters_PackML_Base.MAX_NO_OF_SUBMODULES DO
+	IF _Observers[i] = 0 THEN
+		//array size is declared to +1 for these 2 lines of code to be safe
+		_Observers[i]	  := _Observers[i + 1];
+		_Observers[i + 1] := 0;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="MachineModule">
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="MachineModule.CyclicLogic">
+      <LineId Id="213" Count="47" />
+      <LineId Id="37" Count="0" />
+    </LineIds>
+    <LineIds Name="MachineModule.Data.Get">
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="MachineModule.Initialize">
+      <LineId Id="116" Count="25" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="MachineModule.notifyObserver">
+      <LineId Id="28" Count="4" />
+      <LineId Id="4" Count="0" />
+    </LineIds>
+    <LineIds Name="MachineModule.registerObserver">
+      <LineId Id="73" Count="15" />
+      <LineId Id="7" Count="0" />
+    </LineIds>
+    <LineIds Name="MachineModule.removeObserver">
+      <LineId Id="103" Count="17" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="121" Count="2" />
+      <LineId Id="98" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

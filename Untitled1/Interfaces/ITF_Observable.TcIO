@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="ITF_Observable" Id="{299ee042-88c5-4516-be13-3cb87c805b06}">
+    <Declaration><![CDATA[INTERFACE ITF_Observable
+]]></Declaration>
+    <Method Name="notifyObserver" Id="{7d400b0a-b618-4ff9-ac85-a4b5079a0b8f}">
+      <Declaration><![CDATA[METHOD notifyObserver : BOOL]]></Declaration>
+    </Method>
+    <Method Name="registerObserver" Id="{245a0123-2057-4f43-b962-4dd2985459f0}">
+      <Declaration><![CDATA[METHOD registerObserver : BOOL
+VAR_INPUT
+	Observer : ITF_Observer;
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="removeObserver" Id="{dc591c9c-1963-4568-ad86-73c64d0c48b1}">
+      <Declaration><![CDATA[METHOD removeObserver : BOOL
+VAR_INPUT
+	Observer : ITF_Observer;
+END_VAR]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>
